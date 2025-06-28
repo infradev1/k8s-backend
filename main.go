@@ -9,9 +9,9 @@ import (
 )
 
 type User struct {
-	Name  string
-	Age   int
-	Email string
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+	Email string `json:"email,omitempty"`
 }
 
 var users map[int]*User
