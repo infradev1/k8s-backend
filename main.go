@@ -58,9 +58,12 @@ func userInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := json.MarshalIndent(user, "", "  ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	w.Write(data)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+
+	//data, err := json.MarshalIndent(user, "", "  ")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//w.Write(data)
 }
