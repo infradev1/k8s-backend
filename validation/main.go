@@ -16,7 +16,7 @@ type User struct {
 	Age   int    `json:"age"`
 }
 
-var users map[uuid.UUID]*User
+var users map[string]*User
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -35,11 +35,13 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := uuid.New()
+	userId := uuid.NewString()
 	users[userId] = &user
+
 	w.WriteHeader(http.StatusOK)
 	if _, err := fmt.Fprintf(w, "User %v created successfully", userId); err != nil {
-		log.Fatal(err)
+		http.Error(w, "Error writing response", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -56,10 +58,37 @@ func validateUser(user *User) error {
 	return nil
 }
 
+func getUserHandle(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "Query parameter 'id' must be provided", http.StatusBadRequest)
+		return
+	}
+
+	user := users[id]
+	if user == nil {
+		http.Error(w, fmt.Sprintf("User %s not found", id), http.StatusNotFound)
+		return
+	}
+
+	data, err := json.MarshalIndent(user, "", "  ")
+	if err != nil {
+		http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	if _, err := w.Write(data); err != nil {
+		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
+		return
+	}
+}
+
 func main() {
-	users = make(map[uuid.UUID]*User)
+	users = make(map[string]*User)
 
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/users", getUserHandle)
 
 	if err := http.ListenAndServe(":8081", nil); err != nil {
 		log.Fatal(err)
