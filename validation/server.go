@@ -11,8 +11,8 @@ import (
 )
 
 type Server struct {
-	Port     string
-	Database map[string]*User
+	Port string
+	DB   Database[User]
 }
 
 func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,10 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := uuid.NewString()
-	s.Database[userId] = &user
+	if err := s.DB.Insert(userId, &user); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	if _, err := fmt.Fprintf(w, "User %v created successfully", userId); err != nil {
@@ -62,8 +65,8 @@ func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := s.Database[id]
-	if user == nil {
+	user, err := s.DB.Get(id)
+	if err != nil {
 		http.Error(w, fmt.Sprintf("User %s not found", id), http.StatusNotFound)
 		return
 	}

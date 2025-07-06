@@ -63,7 +63,10 @@ func TestRegisterHandler(t *testing.T) {
 	// start server in separate goroutine
 	go func() {
 		server := &Server{
-			Database: make(map[string]*User),
+			Port: ":8081",
+			DB: &Cache[User]{
+				Data: make(map[string]*User),
+			},
 		}
 		server.Run()
 	}()

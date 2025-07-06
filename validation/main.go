@@ -8,8 +8,10 @@ type User struct {
 
 func main() {
 	server := &Server{
-		Port:     ":8081",
-		Database: make(map[string]*User),
+		Port: ":8081",
+		DB: &Cache[User]{
+			Data: make(map[string]*User),
+		},
 	}
 	server.Run()
 }
