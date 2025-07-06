@@ -37,8 +37,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateUser(user *User) error {
-	if user.Name == "" {
-		return fmt.Errorf("User name must not be empty")
+	if len(user.Name) < 3 {
+		return fmt.Errorf("User name must have 3+ characters")
 	}
 	if !strings.Contains(user.Email, "@") {
 		return fmt.Errorf("User email must be valid")

@@ -14,15 +14,39 @@ func TestValidateUser(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "Missing user name",
+			name:          "Valid user",
+			user:          &User{"John", "john@work.com", 35},
+			expectedError: false,
+		},
+		{
+			name:          "Empty user",
 			user:          &User{},
+			expectedError: true,
+		},
+		{
+			name:          "Invalid user name",
+			user:          &User{"H", "john@work.com", 35},
+			expectedError: true,
+		},
+		{
+			name:          "Invalid email",
+			user:          &User{"John", "work.com", 35},
+			expectedError: true,
+		},
+		{
+			name:          "Invalid age",
+			user:          &User{"John", "john@work.com", 15},
 			expectedError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Error(t, validateUser(tt.user))
+			if tt.expectedError {
+				require.Error(t, validateUser(tt.user))
+			} else {
+				require.NoError(t, validateUser(tt.user))
+			}
 		})
 	}
 }
