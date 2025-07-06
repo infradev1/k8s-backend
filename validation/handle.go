@@ -3,13 +3,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
 )
 
-func registerHandler(w http.ResponseWriter, r *http.Request) {
+type Server struct {
+	Database map[string]*User
+}
+
+func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "User registration requires POST", http.StatusBadRequest)
 		return
@@ -27,7 +32,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := uuid.NewString()
-	Users[userId] = &user
+	s.Database[userId] = &user
 
 	w.WriteHeader(http.StatusOK)
 	if _, err := fmt.Fprintf(w, "User %v created successfully", userId); err != nil {
@@ -49,14 +54,14 @@ func validateUser(user *User) error {
 	return nil
 }
 
-func getUserHandle(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "Query parameter 'id' must be provided", http.StatusBadRequest)
 		return
 	}
 
-	user := Users[id]
+	user := s.Database[id]
 	if user == nil {
 		http.Error(w, fmt.Sprintf("User %s not found", id), http.StatusNotFound)
 		return
@@ -72,5 +77,14 @@ func getUserHandle(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(data); err != nil {
 		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
 		return
+	}
+}
+
+func (s *Server) Run() {
+	http.HandleFunc("/register", s.RegisterHandler)
+	http.HandleFunc("/users", s.GetUserHandler)
+
+	if err := http.ListenAndServe(":8081", nil); err != nil {
+		log.Fatal(err)
 	}
 }
