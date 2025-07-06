@@ -12,11 +12,9 @@ type User struct {
 }
 
 var Users map[string]*User
-var Events chan *User
 
 func main() {
 	Users = make(map[string]*User)
-	Events = make(chan *User)
 
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/users", getUserHandle)
