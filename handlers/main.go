@@ -8,18 +8,18 @@ import (
 	"strconv"
 )
 
-type User struct {
+type MyUser struct {
 	Name  string `json:"name"`
 	Age   int    `json:"age"`
 	Email string `json:"email,omitempty"`
 }
 
-var users map[int]*User
+var users map[int]*MyUser
 
 func main() {
-	users = make(map[int]*User)
+	users = make(map[int]*MyUser)
 	for i := range 5 {
-		users[i] = &User{fmt.Sprintf("user-%d", i), 100, fmt.Sprintf("user-%d@email.com", i)}
+		users[i] = &MyUser{fmt.Sprintf("user-%d", i), 100, fmt.Sprintf("user-%d@email.com", i)}
 	}
 
 	// Register handlers

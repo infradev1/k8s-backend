@@ -5,7 +5,6 @@ import (
 	"sync"
 )
 
-// TODO: serializable constraint
 type Database[T any] interface {
 	Get(id string) (*T, error)
 	Insert(id string, element *T) error
