@@ -11,6 +11,7 @@ import (
 )
 
 type Server struct {
+	Port     string
 	Database map[string]*User
 }
 
@@ -84,7 +85,7 @@ func (s *Server) Run() {
 	http.HandleFunc("/register", s.RegisterHandler)
 	http.HandleFunc("/users", s.GetUserHandler)
 
-	if err := http.ListenAndServe(":8081", nil); err != nil {
+	if err := http.ListenAndServe(s.Port, nil); err != nil {
 		log.Fatal(err)
 	}
 }
