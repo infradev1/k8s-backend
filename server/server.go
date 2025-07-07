@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"strings"
 
+	db "k8s-backend/database"
+	m "k8s-backend/model"
+
 	"github.com/google/uuid"
 )
 
 type Server struct {
 	Port string
-	DB   Database[User]
+	DB   db.Database[m.User]
 }
 
 func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +24,7 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user User
+	var user m.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "Request body must contain name, email, and age", http.StatusBadRequest)
 		return
@@ -45,7 +48,7 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func validateUser(user *User) error {
+func validateUser(user *m.User) error {
 	if len(user.Name) < 3 {
 		return fmt.Errorf("User name must have 3+ characters")
 	}

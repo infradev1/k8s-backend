@@ -1,9 +1,51 @@
-package main
+package database
 
 import (
 	"fmt"
+	"log"
+	"log/slog"
 	"sync"
+
+	m "k8s-backend/model"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
+
+var db *gorm.DB
+
+func InitDatabase() {
+	dsn := "host:localhost user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
+
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		slog.Error(err.Error())
+		log.Fatal(fmt.Errorf("Failed to connect to the database: %w", err))
+	}
+
+	if err = db.AutoMigrate(&m.Book{}); err != nil {
+		log.Fatal(fmt.Errorf("Failed to migrate database schema: %w", err))
+	}
+
+	initBooks := []m.Book{
+		{Title: "QM", Author: "Bohr", Price: 10.99},
+		{Title: "QFT", Author: "Dirac", Price: 11.99},
+		{Title: "GR", Author: "Einstein", Price: 12.99},
+	}
+
+	for i, book := range initBooks {
+		var existingBook m.Book
+		result := db.First(&existingBook, i+1)
+		if result.RowsAffected == 0 {
+			if r := db.Create(&book); r.Error != nil {
+				slog.Error(r.Error.Error())
+			}
+		}
+	}
+
+	slog.Info("Database connection established")
+}
 
 type Database[T any] interface {
 	Get(id string) (*T, error)

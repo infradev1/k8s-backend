@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	db "k8s-backend/database"
+	m "k8s-backend/model"
 
 	"github.com/stretchr/testify/require"
 )
@@ -18,32 +21,32 @@ func TestValidateUser(t *testing.T) {
 	// table-driven tests for the various cases
 	tests := []struct {
 		name          string
-		user          *User
+		user          *m.User
 		expectedError bool
 	}{
 		{
 			name:          "Valid user",
-			user:          &User{"John", "john@work.com", 35},
+			user:          &m.User{"John", "john@work.com", 35},
 			expectedError: false,
 		},
 		{
 			name:          "Empty user",
-			user:          &User{},
+			user:          &m.User{},
 			expectedError: true,
 		},
 		{
 			name:          "Invalid user name",
-			user:          &User{"H", "john@work.com", 35},
+			user:          &m.User{"H", "john@work.com", 35},
 			expectedError: true,
 		},
 		{
 			name:          "Invalid email",
-			user:          &User{"John", "work.com", 35},
+			user:          &m.User{"John", "work.com", 35},
 			expectedError: true,
 		},
 		{
 			name:          "Invalid age",
-			user:          &User{"John", "john@work.com", 15},
+			user:          &m.User{"John", "john@work.com", 15},
 			expectedError: true,
 		},
 	}
@@ -64,15 +67,15 @@ func TestRegisterHandler(t *testing.T) {
 	go func() {
 		server := &Server{
 			Port: ":8081",
-			DB: &Cache[User]{
-				Data: make(map[string]*User),
+			DB: &db.Cache[m.User]{
+				Data: make(map[string]*m.User),
 			},
 		}
 		server.Run()
 	}()
 	time.Sleep(5 * time.Second)
 
-	user := &User{"John", "john@work.com", 35}
+	user := &m.User{Name: "John", Email: "john@work.com", Age: 35}
 	data, err := json.Marshal(user)
 	if err != nil {
 		t.Error(err)
