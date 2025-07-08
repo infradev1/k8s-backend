@@ -15,17 +15,18 @@ import (
 var db *gorm.DB
 
 func InitDatabase() {
-	dsn := "host:localhost user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
+	//os.Unsetenv("PGUSER")
+	dsn := "host=127.0.0.1 user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
 
 	var err error
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		slog.Error(err.Error())
-		log.Fatal(fmt.Errorf("Failed to connect to the database: %w", err))
+		log.Fatal(fmt.Errorf("failed to connect to the database: %w", err))
 	}
 
 	if err = db.AutoMigrate(&m.Book{}); err != nil {
-		log.Fatal(fmt.Errorf("Failed to migrate database schema: %w", err))
+		log.Fatal(fmt.Errorf("failed to migrate database schema: %w", err))
 	}
 
 	initBooks := []m.Book{
@@ -45,6 +46,14 @@ func InitDatabase() {
 	}
 
 	slog.Info("Database connection established")
+}
+
+func CloseDatabase() error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get generic database object: %w", err)
+	}
+	return sqlDB.Close()
 }
 
 type Database[T any] interface {
