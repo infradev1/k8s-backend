@@ -62,7 +62,12 @@ func (p *Postgres[T]) Close() {
 }
 
 func (p *Postgres[T]) Get(id string) (*T, error) {
-	return nil, nil
+	var record T
+	result := p.DB.First(&record, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &record, nil
 }
 
 func (p *Postgres[T]) Insert(id string, element *T) error {
@@ -83,7 +88,11 @@ type Cache[T any] struct {
 }
 
 func (c *Cache[T]) Initialize() error {
-	c.Data = make(map[string]*T)
+	c.Data = map[string]*T{
+		"0": new(T),
+		"1": new(T),
+		"2": new(T),
+	}
 	return nil
 }
 

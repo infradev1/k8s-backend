@@ -1,11 +1,13 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	db "k8s-backend/database"
 	m "k8s-backend/model"
 	"log"
 	"log/slog"
+	"net/http"
 )
 
 type BookService struct {
@@ -32,5 +34,31 @@ func (s *BookService) Init() {
 }
 
 func (s *BookService) SetupEndpoints() {
-	// TODO
+	http.HandleFunc("/books", s.GetBookHandler)
+}
+
+func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "Query parameter 'id' must be provided", http.StatusBadRequest)
+		return
+	}
+
+	book, err := s.DB.Get(id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("id %s not found: %v", id, err), http.StatusNotFound)
+		return
+	}
+
+	data, err := json.MarshalIndent(book, "", "  ")
+	if err != nil {
+		http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	if _, err := w.Write(data); err != nil {
+		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
+		return
+	}
 }
