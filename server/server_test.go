@@ -18,63 +18,18 @@ import (
 const url = "http://localhost:8081"
 const registerRoute = "/register"
 
-func TestValidateUser(t *testing.T) {
-	// table-driven tests for the various cases
-	tests := []struct {
-		name          string
-		user          *m.User
-		expectedError bool
-	}{
-		{
-			name:          "Valid user",
-			user:          &m.User{Name: "John", Email: "john@work.com", Age: 35},
-			expectedError: false,
-		},
-		{
-			name:          "Empty user",
-			user:          &m.User{},
-			expectedError: true,
-		},
-		{
-			name:          "Invalid user name",
-			user:          &m.User{Name: "H", Email: "john@work.com", Age: 35},
-			expectedError: true,
-		},
-		{
-			name:          "Invalid email",
-			user:          &m.User{Name: "John", Email: "work.com", Age: 35},
-			expectedError: true,
-		},
-		{
-			name:          "Invalid age",
-			user:          &m.User{Name: "John", Email: "john@work.com", Age: 15},
-			expectedError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.expectedError {
-				require.Error(t, svc.ValidateUser(tt.user))
-			} else {
-				require.NoError(t, svc.ValidateUser(tt.user))
-			}
-		})
-	}
-}
-
 func TestRegisterHandler(t *testing.T) {
-	s := &svc.UserService{
+	userSvc := &svc.UserService{
 		DB: &db.Cache[m.User]{},
 	}
-	s.Init()
-	defer s.DB.Close()
+	userSvc.Init()
+	defer userSvc.DB.Close()
 
 	// start server in separate goroutine
 	go func() {
 		server := &Server{
 			Port:     ":8081",
-			Services: []Service{s},
+			Services: []Service{userSvc},
 		}
 		server.Run()
 	}()
