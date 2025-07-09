@@ -2,70 +2,93 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"sync"
-
-	m "k8s-backend/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB
-
-func InitDatabase() {
-	//os.Unsetenv("PGUSER")
-	dsn := "host=127.0.0.1 user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
-
-	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		slog.Error(err.Error())
-		log.Fatal(fmt.Errorf("failed to connect to the database: %w", err))
-	}
-
-	if err = db.AutoMigrate(&m.Book{}); err != nil {
-		log.Fatal(fmt.Errorf("failed to migrate database schema: %w", err))
-	}
-
-	initBooks := []m.Book{
-		{Title: "QM", Author: "Bohr", Price: 10.99},
-		{Title: "QFT", Author: "Dirac", Price: 11.99},
-		{Title: "GR", Author: "Einstein", Price: 12.99},
-	}
-
-	for i, book := range initBooks {
-		var existingBook m.Book
-		result := db.First(&existingBook, i+1)
-		if result.RowsAffected == 0 {
-			if r := db.Create(&book); r.Error != nil {
-				slog.Error(r.Error.Error())
-			}
-		}
-	}
-
-	slog.Info("Database connection established")
-}
-
-func CloseDatabase() error {
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get generic database object: %w", err)
-	}
-	return sqlDB.Close()
-}
-
 type Database[T any] interface {
+	Initialize() error
+	Close()
 	Get(id string) (*T, error)
 	Insert(id string, element *T) error
 	Update(id string, element *T) error
 	Delete(id string) error
 }
 
+type Postgres[T any] struct {
+	DB           *gorm.DB
+	InitElements []T
+}
+
+func (p *Postgres[T]) Initialize() error {
+	dsn := "host=127.0.0.1 user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
+
+	var err error
+	p.DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+
+	if err = p.DB.AutoMigrate(new(T)); err != nil {
+		return err
+	}
+
+	for i, e := range p.InitElements {
+		var existing T
+		result := p.DB.First(&existing, i+1)
+		if result.RowsAffected == 0 {
+			if r := p.DB.Create(&e); r.Error != nil {
+				return r.Error
+			}
+		}
+	}
+
+	slog.Info("Database connection established")
+
+	return nil
+}
+
+func (p *Postgres[T]) Close() {
+	sqlDB, err := p.DB.DB()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if err := sqlDB.Close(); err != nil {
+		slog.Error(err.Error())
+	}
+}
+
+func (p *Postgres[T]) Get(id string) (*T, error) {
+	return nil, nil
+}
+
+func (p *Postgres[T]) Insert(id string, element *T) error {
+	return nil
+}
+
+func (p *Postgres[T]) Update(id string, element *T) error {
+	return nil
+}
+
+func (p *Postgres[T]) Delete(id string) error {
+	return nil
+}
+
 type Cache[T any] struct {
 	Data map[string]*T
 	sync.Mutex
+}
+
+func (c *Cache[T]) Initialize() error {
+	c.Data = make(map[string]*T)
+	return nil
+}
+
+func (c *Cache[T]) Close() {
+	clear(c.Data)
 }
 
 func (c *Cache[T]) Get(id string) (*T, error) {

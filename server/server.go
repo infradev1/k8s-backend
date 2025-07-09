@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -13,14 +14,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type Server struct {
+type UserServer struct {
 	Port string
 	DB   db.Database[m.User]
 }
 
-func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (s *UserServer) RegisterUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "User registration requires POST", http.StatusBadRequest)
+		http.Error(w, "POST required", http.StatusBadRequest)
 		return
 	}
 
@@ -50,18 +51,18 @@ func (s *Server) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func validateUser(user *m.User) error {
 	if len(user.Name) < 3 {
-		return fmt.Errorf("User name must have 3+ characters")
+		return fmt.Errorf("user name must have 3+ characters")
 	}
 	if !strings.Contains(user.Email, "@") {
-		return fmt.Errorf("User email must be valid")
+		return fmt.Errorf("user email must be valid")
 	}
 	if user.Age <= 21 {
-		return fmt.Errorf("User age must be greater than 21")
+		return fmt.Errorf("user age must be greater than 21")
 	}
 	return nil
 }
 
-func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
+func (s *UserServer) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "Query parameter 'id' must be provided", http.StatusBadRequest)
@@ -87,11 +88,37 @@ func (s *Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) Run() {
-	http.HandleFunc("/register", s.RegisterHandler)
+func (s *UserServer) Run() {
+	if err := s.DB.Initialize(); err != nil {
+		slog.Error(err.Error())
+		log.Fatal(fmt.Errorf("failed to initialize database: %w", err))
+	}
+	defer s.DB.Close()
+
+	http.HandleFunc("/register", s.RegisterUserHandler)
 	http.HandleFunc("/users", s.GetUserHandler)
 
-	if err := http.ListenAndServe(s.Port, nil); err != nil {
+	if err := http.ListenAndServe(s.Port, nil); err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+}
+
+type BookServer struct {
+	Port string
+	DB   db.Database[m.Book]
+}
+
+func (s *BookServer) Run() {
+	if err := s.DB.Initialize(); err != nil {
+		slog.Error(err.Error())
+		log.Fatal(fmt.Errorf("failed to initialize database: %w", err))
+	}
+	defer s.DB.Close()
+
+	//http.HandleFunc("/register", s.RegisterUserHandler)
+	//http.HandleFunc("/users", s.GetUserHandler)
+
+	if err := http.ListenAndServe(s.Port, nil); err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }

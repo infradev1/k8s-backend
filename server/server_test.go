@@ -26,7 +26,7 @@ func TestValidateUser(t *testing.T) {
 	}{
 		{
 			name:          "Valid user",
-			user:          &m.User{"John", "john@work.com", 35},
+			user:          &m.User{Name: "John", Email: "john@work.com", Age: 35},
 			expectedError: false,
 		},
 		{
@@ -36,17 +36,17 @@ func TestValidateUser(t *testing.T) {
 		},
 		{
 			name:          "Invalid user name",
-			user:          &m.User{"H", "john@work.com", 35},
+			user:          &m.User{Name: "H", Email: "john@work.com", Age: 35},
 			expectedError: true,
 		},
 		{
 			name:          "Invalid email",
-			user:          &m.User{"John", "work.com", 35},
+			user:          &m.User{Name: "John", Email: "work.com", Age: 35},
 			expectedError: true,
 		},
 		{
 			name:          "Invalid age",
-			user:          &m.User{"John", "john@work.com", 15},
+			user:          &m.User{Name: "John", Email: "john@work.com", Age: 15},
 			expectedError: true,
 		},
 	}
@@ -65,11 +65,9 @@ func TestValidateUser(t *testing.T) {
 func TestRegisterHandler(t *testing.T) {
 	// start server in separate goroutine
 	go func() {
-		server := &Server{
+		server := &UserServer{
 			Port: ":8081",
-			DB: &db.Cache[m.User]{
-				Data: make(map[string]*m.User),
-			},
+			DB:   &db.Cache[m.User]{},
 		}
 		server.Run()
 	}()
