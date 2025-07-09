@@ -10,6 +10,7 @@ import (
 
 	db "k8s-backend/database"
 	m "k8s-backend/model"
+	svc "k8s-backend/services"
 
 	"github.com/stretchr/testify/require"
 )
@@ -54,20 +55,26 @@ func TestValidateUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.expectedError {
-				require.Error(t, validateUser(tt.user))
+				require.Error(t, svc.ValidateUser(tt.user))
 			} else {
-				require.NoError(t, validateUser(tt.user))
+				require.NoError(t, svc.ValidateUser(tt.user))
 			}
 		})
 	}
 }
 
 func TestRegisterHandler(t *testing.T) {
+	s := &svc.UserService{
+		DB: &db.Cache[m.User]{},
+	}
+	s.Init()
+	defer s.DB.Close()
+
 	// start server in separate goroutine
 	go func() {
-		server := &UserServer{
-			Port: ":8081",
-			DB:   &db.Cache[m.User]{},
+		server := &Server{
+			Port:     ":8081",
+			Services: []Service{s},
 		}
 		server.Run()
 	}()
