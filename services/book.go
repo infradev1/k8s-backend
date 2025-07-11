@@ -86,7 +86,7 @@ func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	if _, err := fmt.Fprintf(w, "%s created successfully", book.Title); err != nil {
 		http.Error(w, "Error writing response", http.StatusInternalServerError)
 		return
