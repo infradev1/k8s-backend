@@ -70,7 +70,12 @@ func (p *Postgres[T]) Get(id string) (*T, error) {
 	return &record, nil
 }
 
-func (p *Postgres[T]) Insert(id string, element *T) error {
+func (p *Postgres[T]) Insert(_ string, element *T) error {
+	// GORM handles primary key auto-increment
+	if err := p.DB.Create(element).Error; err != nil {
+		return err
+	}
+
 	return nil
 }
 

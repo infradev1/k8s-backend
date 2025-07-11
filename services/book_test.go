@@ -45,4 +45,20 @@ func TestGetBookHandler(t *testing.T) {
 		t.Error(err)
 	}
 	require.Equal(t, 200, rsp.StatusCode)
+
+	req, err = http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"http://localhost:8082/books?id=10",
+		nil,
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rsp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Error(err)
+	}
+	require.Equal(t, 404, rsp.StatusCode)
 }

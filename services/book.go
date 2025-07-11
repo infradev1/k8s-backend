@@ -35,6 +35,7 @@ func (s *BookService) Init() {
 
 func (s *BookService) SetupEndpoints() {
 	http.HandleFunc("/books", s.GetBookHandler)
+	http.HandleFunc("/create", s.CreateBookHandler)
 }
 
 func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,4 +62,37 @@ func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusBadRequest)
+		return
+	}
+
+	var book m.Book
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		http.Error(w, "Request body must contain title, author, and price", http.StatusBadRequest)
+		return
+	}
+
+	if err := ValidateBook(&book); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.DB.Insert("", &book); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := fmt.Fprintf(w, "%s created successfully", book.Title); err != nil {
+		http.Error(w, "Error writing response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func ValidateBook(book *m.Book) error {
+	return nil
 }
