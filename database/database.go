@@ -13,6 +13,7 @@ type Database[T any] interface {
 	Initialize() error
 	Close()
 	Get(id string) (*T, error)
+	GetAll() ([]*T, error)
 	Insert(id string, element *T) error
 	Update(id string, element *T) error
 	Delete(id string) error
@@ -70,6 +71,14 @@ func (p *Postgres[T]) Get(id string) (*T, error) {
 	return &record, nil
 }
 
+func (p *Postgres[T]) GetAll() ([]*T, error) {
+	var records []*T
+	if err := p.DB.Find(&records).Error; err != nil {
+		return nil, fmt.Errorf("error finding records: %w", err)
+	}
+	return records, nil
+}
+
 func (p *Postgres[T]) Insert(_ string, element *T) error {
 	// GORM handles primary key auto-increment
 	if err := p.DB.Create(element).Error; err != nil {
@@ -113,6 +122,16 @@ func (c *Cache[T]) Get(id string) (*T, error) {
 		return nil, fmt.Errorf("%s not found", id)
 	}
 	return element, nil
+}
+
+func (c *Cache[T]) GetAll() ([]*T, error) {
+	c.Lock()
+	defer c.Unlock()
+	var records []*T
+	for _, v := range c.Data {
+		records = append(records, v)
+	}
+	return records, nil
 }
 
 func (c *Cache[T]) Insert(id string, element *T) error {

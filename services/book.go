@@ -40,8 +40,26 @@ func (s *BookService) SetupEndpoints() {
 
 func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
+	w.Header().Add("Content-Type", "application/json")
+	var data []byte
+
 	if id == "" {
-		http.Error(w, "Query parameter 'id' must be provided", http.StatusBadRequest)
+		books, err := s.DB.GetAll()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Query parameter 'id' must be provided for single book, otherwise: %v", err), http.StatusBadRequest)
+			return
+		}
+		data, err = json.MarshalIndent(books, "", "  ")
+		if err != nil {
+			http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
+			return
+		}
+
+		if _, err := w.Write(data); err != nil {
+			http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
+			return
+		}
+
 		return
 	}
 
@@ -51,13 +69,12 @@ func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := json.MarshalIndent(book, "", "  ")
+	data, err = json.MarshalIndent(book, "", "  ")
 	if err != nil {
 		http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Add("Content-Type", "application/json")
 	if _, err := w.Write(data); err != nil {
 		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
 		return

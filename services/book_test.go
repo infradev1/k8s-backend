@@ -5,41 +5,24 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
 	db "k8s-backend/database"
 	"k8s-backend/model"
-	s "k8s-backend/server"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
+//func TestMain(m *testing.M) {}
+
+// TODO: table-driven tests
+func TestGetBookHandler(t *testing.T) {
 	bookSvc := &BookService{
 		DB: &db.Cache[model.Book]{},
 	}
 	bookSvc.Init()
+	defer bookSvc.DB.Close()
 
-	// start server in separate goroutine
-	go func() {
-		server := &s.Server{
-			Port:     ":8082",
-			Services: []s.Service{bookSvc},
-		}
-		server.Run()
-	}()
-	time.Sleep(5 * time.Second)
-
-	exitCode := m.Run()
-
-	bookSvc.DB.Close()
-
-	os.Exit(exitCode)
-}
-
-func TestGetBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
@@ -50,11 +33,12 @@ func TestGetBookHandler(t *testing.T) {
 		t.Error(err)
 	}
 
-	rsp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-	}
-	require.Equal(t, 200, rsp.StatusCode)
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(bookSvc.GetBookHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
 		context.Background(),
@@ -66,11 +50,29 @@ func TestGetBookHandler(t *testing.T) {
 		t.Error(err)
 	}
 
-	rsp, err = http.DefaultClient.Do(req)
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(bookSvc.GetBookHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusNotFound, rr.Code)
+
+	t.Log(rr.Body.String())
+
+	req, err = http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"http://localhost:8082/books",
+		nil,
+	)
 	if err != nil {
 		t.Error(err)
 	}
-	require.Equal(t, 404, rsp.StatusCode)
+
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(bookSvc.GetBookHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, 200, rr.Code)
+
+	t.Log(rr.Body.String())
 }
 
 func TestCreateBookHandler(t *testing.T) {
