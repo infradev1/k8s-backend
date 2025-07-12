@@ -85,7 +85,7 @@ func TestCreateBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
-		"http://localhost:8082/books",
+		"http://localhost:8082/book",
 		bytes.NewReader(book),
 	)
 	if err != nil {

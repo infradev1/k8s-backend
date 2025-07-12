@@ -35,7 +35,7 @@ func (s *BookService) Init() {
 
 func (s *BookService) SetupEndpoints() {
 	http.HandleFunc("/books", s.GetBookHandler)
-	http.HandleFunc("/create", s.CreateBookHandler)
+	http.HandleFunc("/book", s.CreateBookHandler)
 }
 
 func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
