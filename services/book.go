@@ -8,7 +8,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"strings"
 )
 
 type BookService struct {
@@ -35,9 +34,24 @@ func (s *BookService) Init() {
 }
 
 func (s *BookService) SetupEndpoints() {
-	http.HandleFunc("/books", s.GetBookHandler)
-	http.HandleFunc("/book", s.CreateBookHandler)
-	http.HandleFunc("/books/{id}", s.DeleteBookHandler)
+	http.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			s.GetBookHandler(w, r)
+		} else {
+			fmt.Fprintf(w, "%s not recognized; use GET", r.Method)
+		}
+	})
+
+	http.HandleFunc("/book", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			s.CreateBookHandler(w, r)
+		case http.MethodDelete:
+			s.DeleteBookHandler(w, r)
+		default:
+			fmt.Fprintf(w, "%s not recognized; use POST or DELETE", r.Method)
+		}
+	})
 }
 
 func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,24 +119,19 @@ func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *BookService) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "DELETE required to delete a book by ID", http.StatusBadRequest)
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "query parameter 'id' must be provided", http.StatusBadRequest)
 		return
 	}
 
-	segments := strings.Split(r.URL.Path, "/")
-	if len(segments) < 3 {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.DB.Delete(segments[2]); err != nil {
+	if err := s.DB.Delete(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Book ID %s deleted", segments[2])
+	fmt.Fprintf(w, "Book ID %s deleted", id)
 }
 
 func ValidateBook(book *m.Book) error {

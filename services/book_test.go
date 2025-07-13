@@ -115,7 +115,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/books/0",
+		"http://localhost:8082/books?id=0",
 		nil,
 	)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/books/10",
+		"http://localhost:8082/books?id=10",
 		nil,
 	)
 	if err != nil {
