@@ -93,6 +93,9 @@ func (p *Postgres[T]) Update(id string, element *T) error {
 }
 
 func (p *Postgres[T]) Delete(id string) error {
+	if err := p.DB.Delete(new(T), id).Error; err != nil {
+		return err
+	}
 	return nil
 }
 

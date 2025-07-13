@@ -104,3 +104,45 @@ func TestCreateBookHandler(t *testing.T) {
 
 	require.Equal(t, http.StatusCreated, rr.Code)
 }
+
+func TestDeleteBookHandler(t *testing.T) {
+	bookSvc := &BookService{
+		DB: &db.Cache[model.Book]{},
+	}
+	bookSvc.Init()
+	defer bookSvc.DB.Close()
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodDelete,
+		"http://localhost:8082/books/0",
+		nil,
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(bookSvc.DeleteBookHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	t.Log(rr.Body.String())
+
+	req, err = http.NewRequestWithContext(
+		context.Background(),
+		http.MethodDelete,
+		"http://localhost:8082/books/10",
+		nil,
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr = httptest.NewRecorder()
+	handler = http.HandlerFunc(bookSvc.DeleteBookHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusInternalServerError, rr.Code)
+
+	t.Log(rr.Body.String())
+}

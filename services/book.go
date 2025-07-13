@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
 type BookService struct {
@@ -36,6 +37,7 @@ func (s *BookService) Init() {
 func (s *BookService) SetupEndpoints() {
 	http.HandleFunc("/books", s.GetBookHandler)
 	http.HandleFunc("/book", s.CreateBookHandler)
+	http.HandleFunc("/books/{id}", s.DeleteBookHandler)
 }
 
 func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,17 +51,9 @@ func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Query parameter 'id' must be provided for single book, otherwise: %v", err), http.StatusBadRequest)
 			return
 		}
-		data, err = json.MarshalIndent(books, "", "  ")
-		if err != nil {
-			http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
-			return
-		}
-
-		if _, err := w.Write(data); err != nil {
-			http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
-			return
-		}
-
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(books)
 		return
 	}
 
@@ -108,6 +102,27 @@ func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Error writing response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *BookService) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "DELETE required to delete a book by ID", http.StatusBadRequest)
+		return
+	}
+
+	segments := strings.Split(r.URL.Path, "/")
+	if len(segments) < 3 {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.DB.Delete(segments[2]); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Book ID %s deleted", segments[2])
 }
 
 func ValidateBook(book *m.Book) error {
