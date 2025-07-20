@@ -4,6 +4,8 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Service interface {
@@ -12,8 +14,30 @@ type Service interface {
 }
 
 type Server struct {
+	Router   *gin.Engine
 	Port     string
 	Services []Service
+}
+
+func NewServer(port string, services []Service) *Server {
+	router := gin.Default()
+
+	router.GET("/health", func(c *gin.Context) {
+		c.String(http.StatusOK, "Gin server healthy")
+	})
+	router.GET("/svc", func(c *gin.Context) {
+		// get query parameter
+		name := c.DefaultQuery("name", "Book")
+		c.JSON(http.StatusOK, gin.H{"service": name})
+	})
+
+	slog.Info("Gin router", "base path: %s", router.BasePath())
+
+	return &Server{
+		Router:   router,
+		Port:     port,
+		Services: services,
+	}
 }
 
 func (s *Server) Run() {
@@ -22,8 +46,11 @@ func (s *Server) Run() {
 		svc.SetupEndpoints()
 	}
 
-	slog.Info("starting server...")
-	if err := http.ListenAndServe(s.Port, nil); err != http.ErrServerClosed {
+	slog.Info("starting server", "port", s.Port)
+	if err := s.Router.Run(s.Port); err != nil {
 		log.Fatal(err)
 	}
+	//if err := http.ListenAndServe(s.Port, nil); err != http.ErrServerClosed {
+	//	log.Fatal(err)
+	//}
 }

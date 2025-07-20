@@ -18,13 +18,7 @@ func main() {
 	defer bookSvc.DB.Close()
 
 	go func() {
-		server := &s.Server{
-			Port: ":8081",
-			Services: []s.Service{
-				bookSvc,
-			},
-		}
-		server.Run()
+		s.NewServer(":8081", []s.Service{bookSvc}).Run()
 	}()
 
 	<-ctx.Done()

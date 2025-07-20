@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	db "k8s-backend/database"
 	m "k8s-backend/model"
@@ -25,16 +25,6 @@ func TestRegisterHandler(t *testing.T) {
 	userSvc.Init()
 	defer userSvc.DB.Close()
 
-	// start server in separate goroutine
-	go func() {
-		server := &Server{
-			Port:     ":8081",
-			Services: []Service{userSvc},
-		}
-		server.Run()
-	}()
-	time.Sleep(5 * time.Second)
-
 	user := &m.User{Name: "John", Email: "john@work.com", Age: 35}
 	data, err := json.Marshal(user)
 	if err != nil {
@@ -50,9 +40,9 @@ func TestRegisterHandler(t *testing.T) {
 		t.Error(err)
 	}
 
-	rsp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-	}
-	require.Equal(t, 200, rsp.StatusCode)
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(userSvc.RegisterUserHandler)
+	handler.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	t.Log(rr.Body.String())
 }
