@@ -49,8 +49,10 @@ func (s *BookService) SetupEndpoints() {
 			s.CreateBookHandler(w, r)
 		case http.MethodDelete:
 			s.DeleteBookHandler(w, r)
+		case http.MethodPatch:
+			s.UpdateBookHandler(w, r)
 		default:
-			http.Error(w, fmt.Sprintf("%s not recognized; use POST or DELETE", r.Method), http.StatusMethodNotAllowed)
+			http.Error(w, fmt.Sprintf("%s not recognized; use POST, PATCH, or DELETE", r.Method), http.StatusMethodNotAllowed)
 			//fmt.Fprintf(w, "%s not recognized; use POST or DELETE", r.Method)
 		}
 	})
@@ -113,6 +115,29 @@ func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Error writing response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *BookService) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		http.Error(w, "query parameter 'id' must be provided", http.StatusBadRequest)
+		return
+	}
+
+	var updates map[string]any
+	// Decode the JSON body into a map of fields to update
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.DB.Update(id, updates); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to update book: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Return 204 No Content to indicate a successful update
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *BookService) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {

@@ -15,7 +15,7 @@ type Database[T any] interface {
 	Get(id string) (*T, error)
 	GetAll() ([]*T, error)
 	Insert(id string, element *T) error
-	Update(id string, element *T) error
+	Update(id string, fields map[string]any) error
 	Delete(id string) error
 }
 
@@ -88,7 +88,12 @@ func (p *Postgres[T]) Insert(_ string, element *T) error {
 	return nil
 }
 
-func (p *Postgres[T]) Update(id string, element *T) error {
+func (p *Postgres[T]) Update(id string, fields map[string]any) error {
+	// `db.Model(&Post{}).Where("id = ?", id).Updates(updates)` updates the fields in the database.
+	// `updates` contains the fields and values to be updated for the post with the specified ID.
+	if err := p.DB.Model(new(T)).Where("id = ?", id).Updates(fields).Error; err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -147,13 +152,13 @@ func (c *Cache[T]) Insert(id string, element *T) error {
 	return fmt.Errorf("%s already exists", id)
 }
 
-func (c *Cache[T]) Update(id string, element *T) error {
+func (c *Cache[T]) Update(id string, fields map[string]any) error {
 	c.Lock()
 	defer c.Unlock()
 	if e := c.Data[id]; e == nil {
 		return fmt.Errorf("%s does not exist", id)
 	}
-	c.Data[id] = element
+	c.Data[id] = new(T) // mock
 	return nil
 }
 
