@@ -11,6 +11,7 @@ import (
 	db "k8s-backend/database"
 	m "k8s-backend/model"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -25,7 +26,7 @@ func (s *UserService) Init() {
 	}
 }
 
-func (s *UserService) SetupEndpoints() {
+func (s *UserService) SetupEndpoints(r *gin.Engine) {
 	http.HandleFunc("/register", s.RegisterUserHandler)
 	http.HandleFunc("/users", s.GetUserHandler)
 }

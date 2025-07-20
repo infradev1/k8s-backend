@@ -8,6 +8,8 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type BookService struct {
@@ -33,127 +35,98 @@ func (s *BookService) Init() {
 	}
 }
 
-func (s *BookService) SetupEndpoints() {
-	http.HandleFunc("/books", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			s.GetBookHandler(w, r)
-		} else {
-			http.Error(w, fmt.Sprintf("%s not recognized; use GET", r.Method), http.StatusMethodNotAllowed)
-			//fmt.Fprintf(w, "%s not recognized; use GET", r.Method)
-		}
-	})
-
-	http.HandleFunc("/book", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			s.CreateBookHandler(w, r)
-		case http.MethodDelete:
-			s.DeleteBookHandler(w, r)
-		case http.MethodPatch:
-			s.UpdateBookHandler(w, r)
-		default:
-			http.Error(w, fmt.Sprintf("%s not recognized; use POST, PATCH, or DELETE", r.Method), http.StatusMethodNotAllowed)
-			//fmt.Fprintf(w, "%s not recognized; use POST or DELETE", r.Method)
-		}
-	})
+func (s *BookService) SetupEndpoints(r *gin.Engine) {
+	// handlers can still be chained with a wrapper
+	r.GET("/books", s.GetBooksHandler)
+	r.GET("/book", s.GetBookHandler)
+	r.POST("/book", s.CreateBookHandler)
+	r.PATCH("/book", s.UpdateBookHandler)
+	r.DELETE("/book", s.DeleteBookHandler)
 }
 
-func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
-	w.Header().Add("Content-Type", "application/json")
-	var data []byte
+func (s *BookService) GetBooksHandler(c *gin.Context) {
+	books, err := s.DB.GetAll()
+	if err != nil {
+		http.Error(c.Writer, fmt.Sprintf("Query parameter 'id' must be provided for single book, otherwise: %v", err), http.StatusBadRequest)
+		return
+	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.WriteHeader(http.StatusOK)
+	json.NewEncoder(c.Writer).Encode(books)
+}
 
+func (s *BookService) GetBookHandler(c *gin.Context) {
+	id := c.Query("id")
 	if id == "" {
-		books, err := s.DB.GetAll()
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Query parameter 'id' must be provided for single book, otherwise: %v", err), http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(books)
+		http.Error(c.Writer, "query parameter 'id' must be provided", http.StatusBadRequest)
 		return
 	}
 
 	book, err := s.DB.Get(id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("id %s not found: %v", id, err), http.StatusNotFound)
+		http.Error(c.Writer, fmt.Sprintf("id %s not found: %v", id, err), http.StatusNotFound)
 		return
 	}
 
-	data, err = json.MarshalIndent(book, "", "  ")
-	if err != nil {
-		http.Error(w, "Error marshaling struct into JSON", http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := w.Write(data); err != nil {
-		http.Error(w, "Error writing response JSON", http.StatusInternalServerError)
-		return
-	}
+	c.JSON(http.StatusOK, book)
 }
 
-func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) {
+func (s *BookService) CreateBookHandler(c *gin.Context) {
 	var book m.Book
-	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
-		http.Error(w, "Request body must contain title, author, and price", http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&book); err != nil {
+		http.Error(c.Writer, "Request body must contain title, author, and price", http.StatusBadRequest)
 		return
 	}
 
 	if err := ValidateBook(&book); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := s.DB.Insert("", &book); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	if _, err := fmt.Fprintf(w, "%s created successfully with ID %d", book.Title, book.Id); err != nil {
-		http.Error(w, "Error writing response", http.StatusInternalServerError)
-		return
-	}
+	c.String(http.StatusCreated, "%s created successfully with ID %d", book.Title, book.Id)
 }
 
-func (s *BookService) UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+func (s *BookService) UpdateBookHandler(c *gin.Context) {
+	id := c.Query("id")
 	if id == "" {
-		http.Error(w, "query parameter 'id' must be provided", http.StatusBadRequest)
+		http.Error(c.Writer, "query parameter 'id' must be provided", http.StatusBadRequest)
 		return
 	}
 
 	var updates map[string]any
 	// Decode the JSON body into a map of fields to update
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+	if err := json.NewDecoder(c.Request.Body).Decode(&updates); err != nil {
+		http.Error(c.Writer, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
 	if err := s.DB.Update(id, updates); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to update book: %v", err), http.StatusInternalServerError)
+		http.Error(c.Writer, fmt.Sprintf("Failed to update book: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Return 204 No Content to indicate a successful update
-	w.WriteHeader(http.StatusNoContent)
+	c.Writer.WriteHeader(http.StatusNoContent)
 }
 
-func (s *BookService) DeleteBookHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+func (s *BookService) DeleteBookHandler(c *gin.Context) {
+	id := c.Query("id")
 	if id == "" {
-		http.Error(w, "query parameter 'id' must be provided", http.StatusBadRequest)
+		http.Error(c.Writer, "query parameter 'id' must be provided", http.StatusBadRequest)
 		return
 	}
 
 	if err := s.DB.Delete(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Book ID %s deleted", id)
+	c.String(http.StatusOK, "Book ID %s deleted", id)
 }
 
 func ValidateBook(book *m.Book) error {

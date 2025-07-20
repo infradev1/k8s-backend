@@ -25,7 +25,7 @@ type Postgres[T any] struct {
 }
 
 func (p *Postgres[T]) Initialize() error {
-	dsn := "host=127.0.0.1 user=postgres password=postgres dbname=booksdb port=5432 sslmode=disable"
+	dsn := "host=localhost user=carloslara password=postgres dbname=postgres port=5432 sslmode=disable"
 
 	var err error
 	p.DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})

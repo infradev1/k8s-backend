@@ -10,6 +10,7 @@ import (
 	db "k8s-backend/database"
 	"k8s-backend/model"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,52 +27,50 @@ func TestGetBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"http://localhost:8082/books?id=0",
+		"/books",
 		nil,
 	)
 	if err != nil {
 		t.Error(err)
 	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	bookSvc.SetupEndpoints(router)
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(bookSvc.GetBookHandler)
-	handler.ServeHTTP(rr, req)
-	require.Equal(t, http.StatusOK, rr.Code)
-
-	t.Log(rr.Body.String())
-
-	req, err = http.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		"http://localhost:8082/books?id=10",
-		nil,
-	)
-	if err != nil {
-		t.Error(err)
-	}
-
-	rr = httptest.NewRecorder()
-	handler = http.HandlerFunc(bookSvc.GetBookHandler)
-	handler.ServeHTTP(rr, req)
-	require.Equal(t, http.StatusNotFound, rr.Code)
-
-	t.Log(rr.Body.String())
-
-	req, err = http.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		"http://localhost:8082/books",
-		nil,
-	)
-	if err != nil {
-		t.Error(err)
-	}
-
-	rr = httptest.NewRecorder()
-	handler = http.HandlerFunc(bookSvc.GetBookHandler)
-	handler.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 	require.Equal(t, 200, rr.Code)
+	t.Log(rr.Body.String())
 
+	req, err = http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/book?id=0",
+		nil,
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr = httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	t.Log(rr.Body.String())
+
+	req, err = http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/book?id=10",
+		nil,
+	)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rr = httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusNotFound, rr.Code)
 	t.Log(rr.Body.String())
 }
 
@@ -94,10 +93,11 @@ func TestCreateBookHandler(t *testing.T) {
 		t.Error(err)
 	}
 
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	bookSvc.SetupEndpoints(router)
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(bookSvc.CreateBookHandler)
-	handler.ServeHTTP(rr, req)
-
+	router.ServeHTTP(rr, req)
 	t.Log(rr.Body.String())
 
 	// t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
@@ -115,24 +115,25 @@ func TestDeleteBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/books?id=0",
+		"http://localhost:8082/book?id=0",
 		nil,
 	)
 	if err != nil {
 		t.Error(err)
 	}
 
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	bookSvc.SetupEndpoints(router)
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(bookSvc.DeleteBookHandler)
-	handler.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
-
 	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/books?id=10",
+		"http://localhost:8082/book?id=10",
 		nil,
 	)
 	if err != nil {
@@ -140,9 +141,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
-	handler = http.HandlerFunc(bookSvc.DeleteBookHandler)
-	handler.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 	require.Equal(t, http.StatusInternalServerError, rr.Code)
-
 	t.Log(rr.Body.String())
 }

@@ -10,7 +10,7 @@ import (
 
 type Service interface {
 	Init()
-	SetupEndpoints()
+	SetupEndpoints(r *gin.Engine)
 }
 
 type Server struct {
@@ -43,7 +43,7 @@ func NewServer(port string, services []Service) *Server {
 func (s *Server) Run() {
 	for _, svc := range s.Services {
 		slog.Info("setting up endpoints")
-		svc.SetupEndpoints()
+		svc.SetupEndpoints(s.Router)
 	}
 
 	slog.Info("starting server", "port", s.Port)
