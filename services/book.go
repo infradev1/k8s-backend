@@ -38,7 +38,8 @@ func (s *BookService) SetupEndpoints() {
 		if r.Method == http.MethodGet {
 			s.GetBookHandler(w, r)
 		} else {
-			fmt.Fprintf(w, "%s not recognized; use GET", r.Method)
+			http.Error(w, fmt.Sprintf("%s not recognized; use GET", r.Method), http.StatusMethodNotAllowed)
+			//fmt.Fprintf(w, "%s not recognized; use GET", r.Method)
 		}
 	})
 
@@ -49,7 +50,8 @@ func (s *BookService) SetupEndpoints() {
 		case http.MethodDelete:
 			s.DeleteBookHandler(w, r)
 		default:
-			fmt.Fprintf(w, "%s not recognized; use POST or DELETE", r.Method)
+			http.Error(w, fmt.Sprintf("%s not recognized; use POST or DELETE", r.Method), http.StatusMethodNotAllowed)
+			//fmt.Fprintf(w, "%s not recognized; use POST or DELETE", r.Method)
 		}
 	})
 }
@@ -90,11 +92,6 @@ func (s *BookService) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST required", http.StatusBadRequest)
-		return
-	}
-
 	var book m.Book
 	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
 		http.Error(w, "Request body must contain title, author, and price", http.StatusBadRequest)
@@ -112,7 +109,7 @@ func (s *BookService) CreateBookHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	if _, err := fmt.Fprintf(w, "%s created successfully", book.Title); err != nil {
+	if _, err := fmt.Fprintf(w, "%s created successfully with ID %d", book.Title, book.Id); err != nil {
 		http.Error(w, "Error writing response", http.StatusInternalServerError)
 		return
 	}
