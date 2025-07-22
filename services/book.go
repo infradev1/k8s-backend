@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,12 +48,10 @@ func (s *BookService) SetupEndpoints(r *gin.Engine) {
 func (s *BookService) GetBooksHandler(c *gin.Context) {
 	books, err := s.DB.GetAll()
 	if err != nil {
-		http.Error(c.Writer, fmt.Sprintf("Query parameter 'id' must be provided for single book, otherwise: %v", err), http.StatusBadRequest)
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
-	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(c.Writer).Encode(books)
+	c.JSON(http.StatusOK, books)
 }
 
 func (s *BookService) GetBookHandler(c *gin.Context) {
@@ -64,7 +63,7 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 
 	book, err := s.DB.Get(id)
 	if err != nil {
-		http.Error(c.Writer, fmt.Sprintf("id %s not found: %v", id, err), http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("id %s not found: %v", id, err)})
 		return
 	}
 
@@ -73,10 +72,12 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 
 func (s *BookService) CreateBookHandler(c *gin.Context) {
 	var book m.Book
-	if err := json.NewDecoder(c.Request.Body).Decode(&book); err != nil {
-		http.Error(c.Writer, "Request body must contain title, author, and price", http.StatusBadRequest)
+	if err := c.ShouldBindBodyWithJSON(&book); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	book.CreatedAt = time.Now().Format(time.RFC3339)
 
 	if err := ValidateBook(&book); err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)

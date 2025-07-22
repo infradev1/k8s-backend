@@ -41,8 +41,8 @@ func (p *Postgres[T]) Initialize() error {
 		var existing T
 		result := p.DB.First(&existing, i+1)
 		if result.RowsAffected == 0 {
-			if r := p.DB.Create(&e); r.Error != nil {
-				return r.Error
+			if err := p.DB.Create(&e).Error; err != nil {
+				return err
 			}
 		}
 	}
