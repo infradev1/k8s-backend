@@ -64,9 +64,8 @@ func (p *Postgres[T]) Close() {
 
 func (p *Postgres[T]) Get(id string) (*T, error) {
 	var record T
-	result := p.DB.First(&record, id)
-	if result.Error != nil {
-		return nil, result.Error
+	if err := p.DB.First(&record, id).Error; err != nil {
+		return nil, err
 	}
 	return &record, nil
 }
