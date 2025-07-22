@@ -15,6 +15,14 @@ type Book struct {
 }
 
 type Result struct {
-	Value any
-	Error error
+	Value any   `json:"value"`
+	Error error `json:"error,omitempty"`
 }
+
+type FleetHealthStatus struct {
+	Networking bool `json:"networking"`
+	DataCenter bool `json:"data_center"`
+	Kubernetes bool `json:"kubernetes"`
+}
+
+type Region = string
