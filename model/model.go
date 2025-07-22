@@ -13,3 +13,8 @@ type Book struct {
 	Price     float64 `json:"price"`
 	CreatedAt string  `json:"created_at"`
 }
+
+type Result struct {
+	Value any
+	Error error
+}

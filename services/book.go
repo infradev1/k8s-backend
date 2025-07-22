@@ -47,12 +47,20 @@ func (s *BookService) SetupEndpoints(r *gin.Engine) {
 }
 
 func (s *BookService) GetBooksHandler(c *gin.Context) {
-	books, err := s.DB.GetAll()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, err.Error())
+	// each request gets its own unbuffered channel
+	queue := make(chan *m.Result)
+
+	go func() {
+		books, err := s.DB.GetAll()
+		queue <- &m.Result{Value: books, Error: err}
+	}()
+
+	r := <-queue
+	if r.Error != nil {
+		c.JSON(http.StatusInternalServerError, r.Error.Error())
 		return
 	}
-	c.JSON(http.StatusOK, books)
+	c.JSON(http.StatusOK, r.Value)
 }
 
 func (s *BookService) GetBookHandler(c *gin.Context) {

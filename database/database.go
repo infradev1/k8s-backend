@@ -23,6 +23,7 @@ type Database[T any] interface {
 type Postgres[T any] struct {
 	DB           *gorm.DB
 	InitElements []T
+	sync.Mutex
 }
 
 func (p *Postgres[T]) Initialize() error {
@@ -64,6 +65,9 @@ func (p *Postgres[T]) Close() {
 }
 
 func (p *Postgres[T]) Get(id string) (*T, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	var record T
 	if err := p.DB.First(&record, id).Error; err != nil {
 		return nil, err
@@ -72,6 +76,9 @@ func (p *Postgres[T]) Get(id string) (*T, error) {
 }
 
 func (p *Postgres[T]) GetAll() ([]*T, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	var records []*T
 	if err := p.DB.Find(&records).Error; err != nil {
 		return nil, fmt.Errorf("error finding records: %w", err)
@@ -80,6 +87,9 @@ func (p *Postgres[T]) GetAll() ([]*T, error) {
 }
 
 func (p *Postgres[T]) Insert(_ string, element *T) error {
+	p.Lock()
+	defer p.Unlock()
+
 	// GORM handles primary key auto-increment
 	if err := p.DB.Create(element).Error; err != nil {
 		return err
@@ -89,6 +99,9 @@ func (p *Postgres[T]) Insert(_ string, element *T) error {
 }
 
 func (p *Postgres[T]) Update(id string, fields map[string]any) error {
+	p.Lock()
+	defer p.Unlock()
+
 	// `db.Model(&Post{}).Where("id = ?", id).Updates(updates)` updates the fields in the database.
 	// `updates` contains the fields and values to be updated for the post with the specified ID.
 	if err := p.DB.Model(new(T)).Where("id = ?", id).Updates(fields).Error; err != nil {
@@ -98,6 +111,9 @@ func (p *Postgres[T]) Update(id string, fields map[string]any) error {
 }
 
 func (p *Postgres[T]) Delete(id string) error {
+	p.Lock()
+	defer p.Unlock()
+
 	if err := p.DB.Delete(new(T), id).Error; err != nil {
 		return err
 	}
