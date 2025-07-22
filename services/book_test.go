@@ -27,7 +27,7 @@ func TestGetBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"/books",
+		"/api/v1/books",
 		nil,
 	)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestGetBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"/book/0",
+		"/api/v1/book/0",
 		nil,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestGetBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"/book/10",
+		"/api/v1/book/10",
 		nil,
 	)
 	if err != nil {
@@ -86,7 +86,7 @@ func TestCreateBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
-		"http://localhost:8082/book",
+		"/api/v1/book",
 		bytes.NewReader(book),
 	)
 	if err != nil {
@@ -115,7 +115,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/book?id=0",
+		"/api/v1/book?id=0",
 		nil,
 	)
 	if err != nil {
@@ -133,7 +133,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodDelete,
-		"http://localhost:8082/book?id=10",
+		"/api/v1/book?id=10",
 		nil,
 	)
 	if err != nil {

@@ -38,12 +38,15 @@ func (s *BookService) Init() {
 }
 
 func (s *BookService) SetupEndpoints(r *gin.Engine) {
-	// handlers can still be chained with a wrapper
-	r.GET("/books", s.GetBooksHandler)
-	r.GET("/book/:id", s.GetBookHandler)
-	r.POST("/book", s.CreateBookHandler)
-	r.PATCH("/book", s.UpdateBookHandler)
-	r.DELETE("/book", s.DeleteBookHandler)
+	v1 := r.Group("api/v1")
+	{
+		// handlers can still be chained with a wrapper
+		v1.GET("/books", s.GetBooksHandler)
+		v1.GET("/book/:id", s.GetBookHandler)
+		v1.POST("/book", s.CreateBookHandler)
+		v1.PATCH("/book", s.UpdateBookHandler)
+		v1.DELETE("/book", s.DeleteBookHandler)
+	}
 }
 
 func (s *BookService) GetBooksHandler(c *gin.Context) {
