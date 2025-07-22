@@ -38,7 +38,7 @@ func (s *BookService) Init() {
 func (s *BookService) SetupEndpoints(r *gin.Engine) {
 	// handlers can still be chained with a wrapper
 	r.GET("/books", s.GetBooksHandler)
-	r.GET("/book", s.GetBookHandler)
+	r.GET("/book/:id", s.GetBookHandler)
 	r.POST("/book", s.CreateBookHandler)
 	r.PATCH("/book", s.UpdateBookHandler)
 	r.DELETE("/book", s.DeleteBookHandler)
@@ -56,9 +56,9 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 }
 
 func (s *BookService) GetBookHandler(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 	if id == "" {
-		http.Error(c.Writer, "query parameter 'id' must be provided", http.StatusBadRequest)
+		http.Error(c.Writer, "id path parameter must be provided", http.StatusBadRequest)
 		return
 	}
 
@@ -121,12 +121,14 @@ func (s *BookService) DeleteBookHandler(c *gin.Context) {
 		return
 	}
 
+	// TODO: Get first to see if it exists
+
 	if err := s.DB.Delete(id); err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.String(http.StatusOK, "Book ID %s deleted", id)
+	c.Writer.WriteHeader(http.StatusNoContent)
 }
 
 func ValidateBook(book *m.Book) error {

@@ -46,7 +46,7 @@ func TestGetBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"/book?id=0",
+		"/book/0",
 		nil,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestGetBookHandler(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"/book?id=10",
+		"/book/10",
 		nil,
 	)
 	if err != nil {
@@ -127,7 +127,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	bookSvc.SetupEndpoints(router)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, http.StatusNoContent, rr.Code)
 	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
