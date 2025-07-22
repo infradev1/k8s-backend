@@ -4,6 +4,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,8 @@ type Server struct {
 
 func NewServer(port string, services []Service) *Server {
 	router := gin.Default()
+
+	router.Use(LoggingMiddleware)
 
 	router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Gin server healthy")
@@ -53,4 +56,11 @@ func (s *Server) Run() {
 	//if err := http.ListenAndServe(s.Port, nil); err != http.ErrServerClosed {
 	//	log.Fatal(err)
 	//}
+}
+
+func LoggingMiddleware(c *gin.Context) {
+	start := time.Now()
+	c.Next()
+	latency := time.Since(start)
+	log.Printf("%s %s %d %s", c.Request.Method, c.Request.URL.Path, c.Writer.Status(), latency)
 }

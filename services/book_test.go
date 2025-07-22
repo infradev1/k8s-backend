@@ -70,8 +70,8 @@ func TestGetBookHandler(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	require.Equal(t, http.StatusNotFound, rr.Code)
 	t.Log(rr.Body.String())
+	require.Equal(t, http.StatusNotFound, rr.Code)
 }
 
 func TestCreateBookHandler(t *testing.T) {

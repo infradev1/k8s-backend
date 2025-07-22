@@ -8,10 +8,10 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type BookService struct {
@@ -63,11 +63,12 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 	}
 
 	book, err := s.DB.Get(id)
-	if err == gorm.ErrRecordNotFound {
-		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("id %s not found", id)})
-		return
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"id": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

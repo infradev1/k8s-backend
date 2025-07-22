@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -126,7 +127,7 @@ func (c *Cache[T]) Get(id string) (*T, error) {
 	defer c.Unlock()
 	element := c.Data[id]
 	if element == nil {
-		return nil, fmt.Errorf("%s not found", id)
+		return nil, errors.New("record not found")
 	}
 	return element, nil
 }
