@@ -65,10 +65,10 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 	book, err := s.DB.Get(id)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusNotFound, gin.H{"id": err.Error()})
+			c.String(http.StatusNotFound, err.Error())
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 

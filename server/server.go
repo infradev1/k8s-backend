@@ -23,7 +23,7 @@ type Server struct {
 func NewServer(port string, services []Service) *Server {
 	router := gin.Default()
 
-	router.Use(LoggingMiddleware)
+	router.Use(loggingMiddleware, customHeaderMiddleware)
 
 	router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Gin server healthy")
@@ -58,9 +58,19 @@ func (s *Server) Run() {
 	//}
 }
 
-func LoggingMiddleware(c *gin.Context) {
+func loggingMiddleware(c *gin.Context) {
 	start := time.Now()
 	c.Next()
 	latency := time.Since(start)
 	log.Printf("%s %s %d %s", c.Request.Method, c.Request.URL.Path, c.Writer.Status(), latency)
+}
+
+// customHeaderMiddleware adds a custom header to all responses
+// Middleware in Gin is a function that takes a gin.Context and performs some operation
+func customHeaderMiddleware(c *gin.Context) {
+	// Add a custom header to the response
+	// Headers set using c.Header will be included in the HTTP response
+	c.Header("X-Custom-Header", "Middleware-Active")
+	// Call the next middleware or the final handler in the chain
+	c.Next()
 }
