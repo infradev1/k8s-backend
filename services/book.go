@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,14 +48,36 @@ func (s *BookService) SetupEndpoints(r *gin.Engine) {
 		v1.PATCH("/book", s.UpdateBookHandler)
 		v1.DELETE("/book", s.DeleteBookHandler)
 	}
+
+	// Versioning ensures backward compatibility by segregating changes into distinct API versions.
+	// Overall, this structure supports multiple versions of the same endpoint, enabling incremental updates without breaking existing clients.
+	//v2 := router.Group("/api/v2")
+	//{
+	//	v2.GET("/notes", getEnhancedBookHandler)
+	//}
 }
 
 func (s *BookService) GetBooksHandler(c *gin.Context) {
+	// extract query parameters for LIMIT and OFFSET
+	l := c.DefaultQuery("limit", "10")
+	o := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(l)
+	if err != nil || limit <= 0 {
+		c.String(http.StatusBadRequest, fmt.Sprintf("response limit must be a number greater than zero: %v", err))
+		return
+	}
+	offset, err := strconv.Atoi(o)
+	if err != nil || offset < 0 {
+		c.String(http.StatusBadRequest, fmt.Sprintf("response offset must be a non-negative number: %v", err))
+		return
+	}
+
 	// each request gets its own unbuffered channel
 	queue := make(chan *m.Result)
 
 	go func() {
-		books, err := s.DB.GetAll()
+		books, err := s.DB.GetAll(limit, offset)
 		queue <- &m.Result{Value: books, Error: err}
 	}()
 
