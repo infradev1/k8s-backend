@@ -14,7 +14,7 @@ type Database[T any] interface {
 	Initialize() error
 	Close()
 	Get(id string) (*T, error)
-	GetAll(limit, offset int) ([]*T, error)
+	GetAll(limit, offset int, filters map[string]any) ([]*T, error)
 	Insert(id string, element *T) error
 	Update(id string, fields map[string]any) error
 	Delete(id string) error
@@ -75,9 +75,13 @@ func (p *Postgres[T]) Get(id string) (*T, error) {
 	return &record, nil
 }
 
-func (p *Postgres[T]) GetAll(limit, offset int) ([]*T, error) {
+func (p *Postgres[T]) GetAll(limit, offset int, filters map[string]any) ([]*T, error) {
 	p.Lock()
 	defer p.Unlock()
+
+	for k, v := range filters {
+		p.DB = p.DB.Where(fmt.Sprintf("%s = ?", k), v)
+	}
 
 	var records []*T
 	if err := p.DB.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
@@ -148,7 +152,7 @@ func (c *Cache[T]) Get(id string) (*T, error) {
 	return element, nil
 }
 
-func (c *Cache[T]) GetAll(limit, offset int) ([]*T, error) {
+func (c *Cache[T]) GetAll(limit, offset int, filters map[string]any) ([]*T, error) {
 	c.Lock()
 	defer c.Unlock()
 

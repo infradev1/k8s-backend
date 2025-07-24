@@ -61,6 +61,20 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 	// extract query parameters for LIMIT and OFFSET
 	l := c.DefaultQuery("limit", "10")
 	o := c.DefaultQuery("offset", "0")
+	// title, author, price filters
+	filters := make(map[string]any)
+	title := c.Query("title")
+	if title != "" {
+		filters["title"] = title
+	}
+	author := c.Query("author")
+	if author != "" {
+		filters["author"] = author
+	}
+	price := c.Query("price")
+	if price != "" {
+		filters["price"] = price
+	}
 
 	limit, err := strconv.Atoi(l)
 	if err != nil || limit <= 0 {
@@ -77,7 +91,7 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 	queue := make(chan *m.Result)
 
 	go func() {
-		books, err := s.DB.GetAll(limit, offset)
+		books, err := s.DB.GetAll(limit, offset, filters)
 		queue <- &m.Result{Value: books, Error: err}
 	}()
 
@@ -86,7 +100,13 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, r.Error.Error())
 		return
 	}
-	c.JSON(http.StatusOK, r.Value)
+	c.JSON(http.StatusOK, gin.H{
+		"data": r.Value,
+		"metadata": gin.H{
+			"limit":  limit,
+			"offset": offset,
+		},
+	})
 }
 
 func (s *BookService) GetBookHandler(c *gin.Context) {
