@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
+	"reflect"
 	"strings"
 	"sync"
+
+	m "k8s-backend/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,7 +18,7 @@ type Database[T any] interface {
 	Initialize() error
 	Close()
 	Get(id string) (*T, error)
-	GetAll(limit, offset int, filters map[string]string) ([]*T, error)
+	GetAll(f *m.Filters[T]) ([]*T, error)
 	Insert(id string, element *T) error
 	Update(id string, fields map[string]any) error
 	Delete(id string) error
@@ -77,23 +79,54 @@ func (p *Postgres[T]) Get(id string) (*T, error) {
 	return &record, nil
 }
 
-func (p *Postgres[T]) GetAll(limit, offset int, filters map[string]string) ([]*T, error) {
+func (p *Postgres[T]) GetAll(f *m.Filters[T]) ([]*T, error) {
 	p.Lock()
 	defer p.Unlock()
 
+	t := reflect.TypeOf(*f.Model)
+	v := reflect.ValueOf(*f.Model)
+
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("invalid model: %v", t.Kind().String())
+	}
+
 	query := p.DB.Model(new(T))
-	for k, v := range filters {
-		if n, err := strconv.ParseFloat(v, 32); err == nil {
-			query = query.Where(fmt.Sprintf("%s >= ?", k), n)
-		} else {
-			query = query.Where(fmt.Sprintf("LOWER(%s) ILIKE ?", k), "%"+strings.ToLower(v)+"%")
+	query = query.Order(f.SortBy + " " + f.Order)
+
+	for i := range t.NumField() {
+		field := t.Field(i)
+		value := v.Field(i)
+
+		if !value.CanInterface() {
+			continue
+		}
+		fieldValue := value.Interface()
+
+		switch f := fieldValue.(type) {
+		case string:
+			if f != "" {
+				query = query.Where(fmt.Sprintf("LOWER(%s) ILIKE ?", field.Name), "%"+strings.ToLower(f)+"%")
+			}
+		case float64:
+			if f > 0 {
+				query = query.Where(fmt.Sprintf("%s >= ?", field.Name), f)
+			}
+		case int:
+			if column := strings.ToLower(field.Name); column != "id" {
+				query = query.Where(fmt.Sprintf("%s >= ?", column), f)
+			}
+		default:
+			return nil, fmt.Errorf("model field data type not supported: %v", f)
 		}
 	}
 
+	query = query.Debug() // Enable SQL logging
+
 	var records []*T
-	if err := query.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
+	if err := query.Limit(f.Limit).Offset(f.Offset).Find(&records).Error; err != nil {
 		return nil, fmt.Errorf("error finding records: %w", err)
 	}
+
 	return records, nil
 }
 
@@ -159,7 +192,7 @@ func (c *Cache[T]) Get(id string) (*T, error) {
 	return element, nil
 }
 
-func (c *Cache[T]) GetAll(limit, offset int, filters map[string]string) ([]*T, error) {
+func (c *Cache[T]) GetAll(f *m.Filters[T]) ([]*T, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -167,11 +200,11 @@ func (c *Cache[T]) GetAll(limit, offset int, filters map[string]string) ([]*T, e
 	skipped := 0
 
 	for _, v := range c.Data {
-		if skipped < offset {
+		if skipped < f.Offset {
 			skipped++
 			continue
 		}
-		if len(records) == limit {
+		if len(records) == f.Limit {
 			break
 		}
 		records = append(records, v)

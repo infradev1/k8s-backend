@@ -26,3 +26,11 @@ type FleetHealthStatus struct {
 }
 
 type Region = string
+
+type Filters[T any] struct {
+	Model  *T     `json:"model"`
+	Limit  int    `json:"limit"`
+	Offset int    `json:"offset"`
+	SortBy string `json:"sort_by"`
+	Order  string `json:"order"`
+}

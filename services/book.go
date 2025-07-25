@@ -58,40 +58,51 @@ func (s *BookService) SetupEndpoints(r *gin.Engine) {
 }
 
 func (s *BookService) GetBooksHandler(c *gin.Context) {
-	// extract query parameters for LIMIT and OFFSET
+	// extract query parameters
 	l := c.DefaultQuery("limit", "10")
 	o := c.DefaultQuery("offset", "0")
+
 	// title, author, price filters
-	filters := make(map[string]string)
-	title := c.Query("title")
-	if title != "" {
-		filters["title"] = title
+	filters := new(m.Filters[m.Book])
+	filters.Model = new(m.Book)
+	filters.Model.Title = c.Query("title")
+	filters.Model.Author = c.Query("author")
+	if price := c.Query("price"); price != "" {
+		n, err := strconv.ParseFloat(price, 32)
+		if err != nil {
+			c.String(http.StatusBadRequest, "'price' query parameter must be a number >= 0")
+			return
+		}
+		filters.Model.Price = n
 	}
-	author := c.Query("author")
-	if author != "" {
-		filters["author"] = author
+
+	filters.SortBy = c.DefaultQuery("sortBy", "title")
+	order := c.DefaultQuery("order", "ASC")
+	if order != "ASC" && order != "DESC" {
+		c.String(http.StatusBadRequest, "'order' query parameter must be ASC or DESC")
+		return
 	}
-	price := c.Query("price")
-	if price != "" {
-		filters["price"] = price
-	}
+	filters.Order = order
 
 	limit, err := strconv.Atoi(l)
 	if err != nil || limit <= 0 {
-		c.String(http.StatusBadRequest, fmt.Sprintf("response limit must be a number greater than zero: %v", err))
+		c.String(http.StatusBadRequest, "response limit must be a number greater than zero: %v", err)
 		return
 	}
+	filters.Limit = limit
+
 	offset, err := strconv.Atoi(o)
 	if err != nil || offset < 0 {
 		c.String(http.StatusBadRequest, fmt.Sprintf("response offset must be a non-negative number: %v", err))
 		return
 	}
+	filters.Offset = offset
 
 	// each request gets its own unbuffered channel
 	queue := make(chan *m.Result)
 
 	go func() {
-		books, err := s.DB.GetAll(limit, offset, filters)
+		books, err := s.DB.GetAll(filters)
 		queue <- &m.Result{Value: books, Error: err}
 	}()
 
@@ -101,11 +112,8 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"data": r.Value,
-		"metadata": gin.H{
-			"limit":  limit,
-			"offset": offset,
-		},
+		"data":     r.Value,
+		"metadata": filters,
 	})
 }
 
