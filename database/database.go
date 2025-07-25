@@ -79,12 +79,14 @@ func (p *Postgres[T]) GetAll(limit, offset int, filters map[string]any) ([]*T, e
 	p.Lock()
 	defer p.Unlock()
 
+	query := p.DB.Model(new(T))
 	for k, v := range filters {
-		p.DB = p.DB.Where(fmt.Sprintf("%s = ?", k), v)
+		// TODO: Fix to handle numeric query parameter
+		query = query.Where(fmt.Sprintf("%s ILIKE ?", k), "%"+v.(string)+"%")
 	}
 
 	var records []*T
-	if err := p.DB.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
+	if err := query.Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, fmt.Errorf("error finding records: %w", err)
 	}
 	return records, nil
