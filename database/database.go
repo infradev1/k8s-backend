@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 
 	"gorm.io/driver/postgres"
@@ -83,9 +84,9 @@ func (p *Postgres[T]) GetAll(limit, offset int, filters map[string]string) ([]*T
 	query := p.DB.Model(new(T))
 	for k, v := range filters {
 		if n, err := strconv.ParseFloat(v, 32); err == nil {
-			query = query.Where(k, n)
+			query = query.Where(fmt.Sprintf("%s >= ?", k), n)
 		} else {
-			query = query.Where(fmt.Sprintf("%s ILIKE ?", k), "%"+v+"%")
+			query = query.Where(fmt.Sprintf("LOWER(%s) ILIKE ?", k), "%"+strings.ToLower(v)+"%")
 		}
 	}
 
