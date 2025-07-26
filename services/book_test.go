@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +28,7 @@ func TestGetBookHandler(t *testing.T) {
 	defer bookSvc.DB.Close()
 
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"/api/v1/books",
 		nil,
@@ -48,7 +47,7 @@ func TestGetBookHandler(t *testing.T) {
 	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"/api/v1/book/0",
 		nil,
@@ -63,7 +62,7 @@ func TestGetBookHandler(t *testing.T) {
 	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"/api/v1/book/10",
 		nil,
@@ -91,7 +90,7 @@ func TestCreateBookHandler(t *testing.T) {
 	book := []byte(`{"Id": 15, "Title": "E-Myth", "Author": "Michael Gerber", "Price": 15.99}`)
 
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodPost,
 		"/api/v1/book",
 		bytes.NewReader(book),
@@ -123,7 +122,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	defer bookSvc.DB.Close()
 
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodDelete,
 		"/api/v1/book?id=0",
 		nil,
@@ -141,7 +140,7 @@ func TestDeleteBookHandler(t *testing.T) {
 	t.Log(rr.Body.String())
 
 	req, err = http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodDelete,
 		"/api/v1/book?id=10",
 		nil,
