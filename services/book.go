@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 type BookService struct {
-	DB db.Database[m.Book]
+	DB    db.Database[m.Book]
+	Cache *redis.Client
 }
 
 func NewBookService() *BookService {
@@ -28,6 +30,9 @@ func NewBookService() *BookService {
 				{Title: "GR", Author: "Einstein", Price: 12.99},
 			},
 		},
+		Cache: redis.NewClient(&redis.Options{
+			Addr: "localhost:6379", // TODO: Config
+		}),
 	}
 }
 
@@ -123,6 +128,25 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 		return
 	}
 
+	// check Redis cache first
+	key := fmt.Sprintf("book:%s", id)
+	val, err := s.Cache.Get(c, key).Result()
+	if err == nil {
+		// cache hit
+		var book m.Book
+		if err := json.Unmarshal([]byte(val), &book); err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, book)
+		return
+	} else if err != redis.Nil {
+		// any error other than a cache miss
+		c.String(http.StatusInternalServerError, "redis get error: %w", err)
+		return
+	}
+
+	// cache miss
 	book, err := s.DB.Get(id)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -130,6 +154,16 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 			return
 		}
 		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	data, err := json.Marshal(book)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.Cache.Set(c, key, data, 24*time.Hour).Err(); err != nil {
+		c.String(http.StatusInternalServerError, "redis set error: %w", err)
 		return
 	}
 

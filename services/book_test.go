@@ -11,6 +11,7 @@ import (
 	"k8s-backend/model"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,6 +21,9 @@ import (
 func TestGetBookHandler(t *testing.T) {
 	bookSvc := &BookService{
 		DB: &db.Cache[model.Book]{},
+		Cache: redis.NewClient(&redis.Options{
+			Addr: "localhost:6379", // TODO: Config
+		}),
 	}
 	bookSvc.Init()
 	defer bookSvc.DB.Close()
@@ -77,6 +81,9 @@ func TestGetBookHandler(t *testing.T) {
 func TestCreateBookHandler(t *testing.T) {
 	bookSvc := &BookService{
 		DB: &db.Cache[model.Book]{},
+		Cache: redis.NewClient(&redis.Options{
+			Addr: "localhost:6379", // TODO: Config
+		}),
 	}
 	bookSvc.Init()
 	defer bookSvc.DB.Close()
@@ -108,6 +115,9 @@ func TestCreateBookHandler(t *testing.T) {
 func TestDeleteBookHandler(t *testing.T) {
 	bookSvc := &BookService{
 		DB: &db.Cache[model.Book]{},
+		Cache: redis.NewClient(&redis.Options{
+			Addr: "localhost:6379", // TODO: Config
+		}),
 	}
 	bookSvc.Init()
 	defer bookSvc.DB.Close()
