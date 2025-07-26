@@ -62,7 +62,6 @@ func (s *BookService) GetBooksHandler(c *gin.Context) {
 	l := c.DefaultQuery("limit", "10")
 	o := c.DefaultQuery("offset", "0")
 
-	// title, author, price filters
 	filters := new(m.Filters[m.Book])
 	filters.Model = new(m.Book)
 	filters.Model.Title = c.Query("title")

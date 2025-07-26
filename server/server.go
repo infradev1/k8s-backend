@@ -4,6 +4,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,16 @@ func NewServer(port string, services []Service) *Server {
 	router := gin.Default()
 
 	router.Use(loggingMiddleware, customHeaderMiddleware)
+
+	rateLimiter := NewTokenBucket(5, 1*time.Second)
+	router.Use(func(c *gin.Context) {
+		if !rateLimiter.Allow() {
+			c.String(http.StatusTooManyRequests, "rate limit exceeded")
+			c.Abort()
+			return
+		}
+		c.Next()
+	})
 
 	router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Gin server healthy")
@@ -73,4 +84,43 @@ func customHeaderMiddleware(c *gin.Context) {
 	c.Header("X-Custom-Header", "Middleware-Active")
 	// Call the next middleware or the final handler in the chain
 	c.Next()
+}
+
+type TokenBucket struct {
+	Capacity   uint
+	Tokens     uint
+	Rate       time.Duration
+	LastFilled time.Time
+	sync.Mutex
+}
+
+func NewTokenBucket(capacity uint, rate time.Duration) *TokenBucket {
+	return &TokenBucket{
+		Capacity:   capacity,
+		Tokens:     capacity,
+		Rate:       rate,
+		LastFilled: time.Now().Local(),
+	}
+}
+
+func (tb *TokenBucket) Allow() bool {
+	tb.Lock()
+	defer tb.Unlock()
+
+	elapsed := time.Since(tb.LastFilled)
+	addTokens := uint(elapsed / tb.Rate) // refill if at least [1] second has elapsed
+	tb.Tokens += addTokens
+	if tb.Tokens > tb.Capacity {
+		tb.Tokens = tb.Capacity
+	}
+	if addTokens > 0 {
+		tb.LastFilled = time.Now()
+	}
+
+	if tb.Tokens > 0 {
+		tb.Tokens--
+		return true
+	}
+
+	return false
 }
