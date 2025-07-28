@@ -15,6 +15,31 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/book:
+    post:
+      consumes:
+      - application/json
+      description: Add a new book entry
+      parameters:
+      - description: Book data
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/model.Book'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Book'
+        "400":
+          description: Bad Request
+          schema: {}
+      summary: Create a new book
+      tags:
+      - books
   /api/v1/books:
     get:
       description: Retrieve a list of all available books

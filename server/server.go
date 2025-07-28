@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	_ "k8s-backend/docs"
+	_ "k8s-backend/docs" // swag init | http://localhost:8081/swagger/index.html
 
 	"github.com/gin-gonic/gin"
 	f "github.com/swaggo/files"

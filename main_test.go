@@ -89,3 +89,48 @@ func BenchmarkCreateBook(b *testing.B) {
 		router.ServeHTTP(rr, req)
 	}
 }
+
+// Inefficient
+func createSlice() []int {
+	var s []int
+	for i := range 1000 {
+		s = append(s, i)
+	}
+	return s
+}
+
+// Optimized
+func createSliceOptimized() []int {
+	s := make([]int, 0, 1000)
+	for i := range 1000 {
+		s = append(s, i)
+	}
+	return s
+}
+
+// BenchmarkInefficientCompute measures the performance of an unoptimized API endpoint
+func BenchmarkInefficientCompute(b *testing.B) {
+	// Initialize a Gin router and define the inefficient endpoint
+	router := gin.Default()
+	router.GET("/compute", func(c *gin.Context) { // This function is assumed to be inefficient
+		s := createSlice()
+		c.JSON(http.StatusOK, gin.H{"element_count": len(s)})
+	})
+
+	// Reset the timer to exclude setup time from the benchmark
+	b.ResetTimer()
+
+	// Run benchmark loop to test API performance under load
+	for b.Loop() {
+		req := httptest.NewRequest("GET", "/compute", nil) // Create a GET request
+		resp := httptest.NewRecorder()                     // Recorder to capture response
+
+		// Serve the request using the Gin router
+		router.ServeHTTP(resp, req)
+
+		// Validate response status
+		if resp.Code != 200 {
+			b.Errorf("Expected status 200, got %v", resp.Code)
+		}
+	}
+}

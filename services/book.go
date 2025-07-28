@@ -177,6 +177,16 @@ func (s *BookService) GetBookHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, book)
 }
 
+// CreateBookHandler godoc
+// @Summary Create a new book
+// @Description Add a new book entry
+// @Tags books
+// @Accept json
+// @Produce json
+// @Param book body model.Book true "Book data"
+// @Success 201 {object} model.Book
+// @Failure 400 {object} error
+// @Router /api/v1/book [post]
 func (s *BookService) CreateBookHandler(c *gin.Context) {
 	var book m.Book
 	if err := c.ShouldBindBodyWithJSON(&book); err != nil {
