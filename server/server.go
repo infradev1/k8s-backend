@@ -7,7 +7,11 @@ import (
 	"sync"
 	"time"
 
+	_ "k8s-backend/docs"
+
 	"github.com/gin-gonic/gin"
+	f "github.com/swaggo/files"
+	gs "github.com/swaggo/gin-swagger"
 )
 
 type Service interface {
@@ -35,6 +39,9 @@ func NewServer(port string, services []Service) *Server {
 		}
 		c.Next()
 	})
+
+	// Set up Swagger UI to serve API documentation
+	router.GET("/swagger/*any", gs.WrapHandler(f.Handler))
 
 	router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "Gin server healthy")

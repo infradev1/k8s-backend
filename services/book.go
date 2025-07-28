@@ -62,6 +62,13 @@ func (s *BookService) SetupEndpoints(r *gin.Engine) {
 	//}
 }
 
+// GetBooksHandler godoc
+// @Summary Get all books
+// @Description Retrieve a list of all available books
+// @Tags books
+// @Produce json
+// @Success 200 {array} m.Book
+// @Router /api/v1/books [get]
 func (s *BookService) GetBooksHandler(c *gin.Context) {
 	// extract query parameters
 	l := c.DefaultQuery("limit", "10")
